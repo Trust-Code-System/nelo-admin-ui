@@ -27,7 +27,9 @@ The build copies the self-contained `index.html` into `dist/`. Styles, scripts, 
 
 ## Deployment
 
-The existing Vercel project is `nelo-atelier-admin-ui`. Its production branch is `main`. Vercel reads `vercel.json`, runs `npm run build`, and serves `dist/`. Pushes to `main` deploy the production site; other branches receive previews when supported by the project's settings.
+The existing Vercel project `nelo-atelier-admin-ui` is connected to `Trust-Code-System/nelo-admin-ui` on GitHub. Its production branch is `main`. Vercel reads `vercel.json`, runs `npm run build`, and serves `dist/`. Pushes to `main` deploy the production site; other branches receive previews when supported by the project's settings.
+
+For a UI update, edit `index.html`, run `npm run build`, review the change locally, and push the commit to GitHub. The production URL stays the same; no additional Vercel project is needed.
 
 ## Data and integration status
 
