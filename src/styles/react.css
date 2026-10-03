@@ -1,0 +1,56 @@
+#root {
+  height: 100%;
+}
+.skip-link {
+  position: fixed;
+  top: -5rem;
+  left: 1rem;
+  z-index: 1000;
+  background: var(--paper);
+  padding: 0.75rem 1rem;
+  color: var(--ink);
+}
+.skip-link:focus {
+  top: 1rem;
+}
+.preview-label {
+  color: var(--smoke);
+  font-size: 0.6rem;
+  padding: 0.65rem 1rem;
+  border-top: 1px solid var(--hair);
+}
+.custom-menu button[aria-selected="true"] {
+  background: var(--rose);
+  color: var(--wine);
+}
+.dialog-error {
+  color: var(--wine);
+  font-size: 0.75rem;
+}
+.workspace:focus {
+  outline: none;
+}
+.session-records {
+  margin-top: 1rem;
+}
+.date-field input[type="date"] {
+  color-scheme: light;
+}
+.record-card.is-hidden,
+.data-table tr.is-hidden {
+  display: none;
+}
+.search-empty {
+  display: block;
+  padding: 1.5rem;
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
