@@ -1,215 +1,180 @@
-import { useWorkspaceActions } from "./hooks/useWorkspaceActions";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AdminContext } from "./context";
-import { useOperations } from "./hooks/useOperations";
-import { Navigation } from "./components/Navigation";
+import { useEffect, useState } from "react";
+import {
+  AdminConnection,
+  useAdminConnection,
+} from "./components/AdminConnection";
 import { Icon } from "./components/Icon";
-import { Drawer } from "./components/Drawer";
-import { CommandSearch } from "./components/CommandSearch";
-import { Menu, type MenuState } from "./components/Menu";
-import { SessionRecords } from "./components/SessionRecords";
-import { drawerLabels, navGroups } from "./data/fixtures";
-import { downloadCsv } from "./lib/records";
-import { OverviewPage } from "./pages/OverviewPage";
-import { CalendarPage } from "./pages/CalendarPage";
-import { AppointmentsPage } from "./pages/AppointmentsPage";
-import { CommissionsPage } from "./pages/CommissionsPage";
-import { ProductionPage } from "./pages/ProductionPage";
-import { MeasurementsPage } from "./pages/MeasurementsPage";
-import { AssetsPage } from "./pages/AssetsPage";
-import { OrdersPage } from "./pages/OrdersPage";
-import { CustomersPage } from "./pages/CustomersPage";
-import { CataloguePage } from "./pages/CataloguePage";
-import { ProfilePage } from "./pages/ProfilePage";
+import { Navigation } from "./components/Navigation";
 import type { View } from "./types";
-const pages = {
-  overview: OverviewPage,
-  calendar: CalendarPage,
-  appointments: AppointmentsPage,
-  commissions: CommissionsPage,
-  production: ProductionPage,
-  measurements: MeasurementsPage,
-  assets: AssetsPage,
-  orders: OrdersPage,
-  customers: CustomersPage,
-  catalogue: CataloguePage,
-  profile: ProfilePage,
-};
+import { ConnectedAppointments } from "./pages/ConnectedAppointments";
+import { LiveCatalogue } from "./pages/LiveCatalogue";
+import { LiveCustomers } from "./pages/LiveCustomers";
+import { LiveAssets } from "./pages/LiveAssets";
+import { LiveCommissions } from "./pages/LiveCommissions";
+import { LiveMeasurements } from "./pages/LiveMeasurements";
+import { LiveOrders } from "./pages/LiveOrders";
+import { LiveOverview, LiveProfile } from "./pages/LiveOverview";
+const navigation = [
+  {
+    label: "Workspace",
+    items: [
+      { id: "overview", name: "Overview", icon: "overview" },
+      { id: "calendar", name: "Calendar", icon: "calendar" },
+      { id: "appointments", name: "Appointments", icon: "clock" },
+    ],
+  },
+  {
+    label: "Atelier",
+    items: [
+      { id: "commissions", name: "Commissions", icon: "layers" },
+      { id: "production", name: "Production", icon: "scissors" },
+      { id: "measurements", name: "Measurements", icon: "ruler" },
+    ],
+  },
+  {
+    label: "Commerce",
+    items: [
+      { id: "catalogue", name: "Catalogue", icon: "box" },
+      { id: "orders", name: "Orders", icon: "bag" },
+      { id: "customers", name: "Customers", icon: "users" },
+      { id: "assets", name: "Assets", icon: "image" },
+    ],
+  },
+];
+const views = new Set([
+  ...navigation.flatMap((g) => g.items.map((i) => i.id)),
+  "profile",
+]);
+function currentView() {
+  const view = location.hash.slice(1);
+  return views.has(view) ? view : "overview";
+}
 export function App() {
-  const operations = useOperations();
-  const {
-    state,
-    setState,
-    drawer,
-    command,
-    mobile,
-    setMobile,
-    collapsed,
-    setCollapsed,
-    message,
-    setMessage,
-    navigate,
-    openDrawer,
-    closeDialog,
-    filter,
-  } = operations;
-  const [menu, setMenu] = useState<MenuState | null>(null);
-  const closeMenu = useCallback(() => setMenu(null), []);
-  const workspace = useRef<HTMLElement>(null);
-  const Page = pages[state.view];
-  const label =
-    navGroups
-      .flatMap(([, items]) => items)
-      .find(([id]) => id === state.view)?.[1] || "Profile";
-  useEffect(() => {
-    workspace.current?.scrollTo({
-      top: 0,
-    });
-    document.title = `${label} · NELO Atelier Operations`;
-    closeMenu();
-  }, [state.view, label, closeMenu]);
-  const click = useWorkspaceActions(operations, setMenu, workspace);
-  const dialogOpen = !!drawer || command;
   return (
-    <AdminContext value={state}>
+    <AdminConnection>
+      <Workspace />
+    </AdminConnection>
+  );
+}
+function Workspace() {
+  const { channel, user } = useAdminConnection()!;
+  const [view, setView] = useState(currentView),
+    [mobile, setMobile] = useState(false),
+    [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const update = () => {
+      setView(currentView());
+      setMobile(false);
+    };
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  const title =
+    view === "profile"
+      ? "Your profile"
+      : (navigation.flatMap((g) => g.items).find((i) => i.id === view)?.name ??
+        "Overview");
+  useEffect(() => {
+    document.title = `${title} · NELO Administration`;
+  }, [title]);
+  function navigate(id: string) {
+    location.hash = id;
+    setView(id);
+    setMobile(false);
+  }
+  return (
+    <div className={`app connected-workspace ${collapsed ? "collapsed" : ""}`}>
       <a
         className="skip-link"
         href="#workspace"
         onClick={(event) => {
           event.preventDefault();
-          workspace.current?.focus();
+          document.getElementById("workspace")?.focus();
         }}
       >
         Skip to workspace
       </a>
-      <div
-        className={`app ${collapsed ? "collapsed" : ""}`}
-        inert={dialogOpen}
-        onClick={click}
+      <aside
+        className={`sidebar ${mobile ? "open" : ""}`}
+        aria-label="Primary navigation"
       >
-        <aside
-          className={`sidebar ${mobile ? "open" : ""}`}
-          aria-label="Primary navigation"
-        >
-          <Navigation
-            view={state.view}
-            collapsed={collapsed}
-            navigate={navigate}
-            onCollapse={() => setCollapsed((value) => !value)}
-          />
-        </aside>
-        <div
-          className={`mobile-scrim ${mobile ? "open" : ""}`}
-          onClick={() => setMobile(false)}
-        />
-        <section className="shell">
-          <header className="topbar">
-            <button
-              className="icon-btn mobile-menu"
-              aria-label="Open navigation"
-              aria-expanded={mobile}
-              onClick={() => setMobile((value) => !value)}
-            >
-              <Icon name="menu" />
-            </button>
-            <div className="crumb">
-              <span>Operations</span>
-              <span>/</span>
-              <b>{label}</b>
-            </div>
-            <button
-              className="search-trigger"
-              aria-label="Open global search"
-              onClick={() => {
-                closeDialog();
-                operations.setCommand(true);
-              }}
-            >
-              <Icon name="search" />
-              <span>Search clients, commissions, orders…</span>
-              <kbd className="kbd">⌘ K</kbd>
-            </button>
-            <div className="top-actions">
-              <button className="control" data-menu="market">
-                <span className="context-label">
-                  {state.filters.market?.split(" · ")[0] || "Lagos studio"}
-                </span>
-                <span className="mono">
-                  {state.filters.market?.split(" · ")[1] || "NGN"}
-                </span>
-              </button>
-              <button
-                className="icon-btn"
-                data-menu="notifications"
-                aria-label="Notifications"
-              >
-                <Icon name="bell" />
-                <span className="notif-dot" />
-              </button>
-            </div>
-          </header>
-          <main
-            className="workspace"
-            id="workspace"
-            tabIndex={-1}
-            ref={workspace}
-            onInput={(event) => {
-              if (
-                (event.target as HTMLInputElement).matches(
-                  ".search-field input",
-                )
-              )
-                filter("search", (event.target as HTMLInputElement).value);
-            }}
-          >
-            <Page state={state} />
-            <SessionRecords state={state} />
-            {state.filters.search && (
-              <p className="preview-label">
-                Search results for “{state.filters.search}”
-              </p>
-            )}
-            <p className="preview-label">
-              Design preview · Demo records · Changes stay in this session
-            </p>
-          </main>
-        </section>
-      </div>
-      {dialogOpen && <div className="backdrop open" onClick={closeDialog} />}
-      {drawer && (
-        <Drawer
-          key={`${drawer.type}-${drawer.detail}`}
-          drawer={drawer}
-          onClose={closeDialog}
-          onSave={operations.save}
-          files={state.uploads}
-          onFilesChange={(uploads) =>
-            setState((previous) => ({ ...previous, uploads }))
-          }
-        />
-      )}
-      {command && (
-        <CommandSearch
-          onClose={closeDialog}
+        <Navigation
+          view={view as View}
+          collapsed={collapsed}
           navigate={navigate}
-          openDrawer={openDrawer}
+          onCollapse={() => setCollapsed((value) => !value)}
+          identifier={user.identifier}
         />
-      )}
-      {menu && (
-        <Menu
-          menu={menu}
-          selected={state.filters[menu.key]}
-          onClose={closeMenu}
-          onSelect={(value) => {
-            if (menu.key === "notifications") openDrawer("detail", value);
-            else filter(menu.key, value);
-            closeMenu();
-          }}
-        />
-      )}
-      <div className="sr-only" role="status" aria-live="polite">
-        {message}
-      </div>
-    </AdminContext>
+      </aside>
+      <button
+        className={`mobile-scrim ${mobile ? "open" : ""}`}
+        aria-label="Close navigation"
+        onClick={() => setMobile(false)}
+      />
+      <section className="shell">
+        <header className="topbar">
+          <button
+            className="icon-btn mobile-menu"
+            aria-label="Open navigation"
+            aria-expanded={mobile}
+            onClick={() => setMobile(!mobile)}
+          >
+            <Icon name="menu" />
+          </button>
+          <div className="crumb">
+            <span>Operations</span>
+            <span>/</span>
+            <b>{title}</b>
+          </div>
+          <div className="top-actions">
+            <span className="control">
+              <span className="context-label">{channel.code}</span>
+            </span>
+            <a
+              className="ghost"
+              href={
+                new URL("/dashboard", import.meta.env.VITE_ADMIN_API_URL).href
+              }
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open Vendure <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </header>
+        <main id="workspace" className="workspace live-main" tabIndex={-1}>
+          <div className="page" key={`${channel.id}-${view}`}>
+            {view !== "overview" && (
+              <header className="page-head">
+                <div>
+                  <div className="eyebrow">
+                    {navigation.find((g) => g.items.some((i) => i.id === view))
+                      ?.label || "Account"}
+                  </div>
+                  <h1 className="page-title">
+                    {view === "calendar" ? "Studio calendar" : title}
+                  </h1>
+                  <p className="page-sub">
+                    Manage {title.toLowerCase()} in {channel.code}.
+                  </p>
+                </div>
+              </header>
+            )}
+            {view === "overview" && <LiveOverview />}
+            {(view === "calendar" || view === "appointments") && (
+              <ConnectedAppointments calendar={view === "calendar"} />
+            )}
+            {view === "catalogue" && <LiveCatalogue />}
+            {view === "customers" && <LiveCustomers />}
+            {view === "assets" && <LiveAssets />}
+            {view === "commissions" && <LiveCommissions />}
+            {view === "production" && <LiveCommissions production />}
+            {view === "measurements" && <LiveMeasurements />}
+            {view === "orders" && <LiveOrders />}
+            {view === "profile" && <LiveProfile />}
+          </div>
+        </main>
+      </section>
+    </div>
   );
 }

@@ -17,7 +17,7 @@ export const kpiCard = (
         {I(icon)}
         {label}
       </span>
-      <span className="delta">{delta}</span>
+      {delta && <span className="delta">{delta}</span>}
     </div>
     <div className="kpi-main">
       <strong className="kpi-value">{value}</strong>

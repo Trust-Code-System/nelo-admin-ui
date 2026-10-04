@@ -6,7 +6,9 @@ export function Navigation({
   collapsed,
   navigate,
   onCollapse,
+  identifier,
 }: {
+  identifier: string;
   view: View;
   collapsed: boolean;
   navigate: (view: View) => void;
@@ -45,7 +47,9 @@ export function Navigation({
                   <Icon name={icon} />
                 </span>
                 <span className="nav-text">{text}</span>
-                {badge && <span className="nav-badge">{badge}</span>}
+                {badge && !identifier && (
+                  <span className="nav-badge">{badge}</span>
+                )}
               </button>
             ))}
           </div>
@@ -54,12 +58,12 @@ export function Navigation({
       <button
         className={`profile ${view === "profile" ? "active" : ""}`}
         onClick={() => navigate("profile")}
-        aria-label="Open Ghost69 profile"
+        aria-label="Open your profile"
       >
-        <div className="avatar">GA</div>
+        <div className="avatar">{identifier.slice(0, 2).toUpperCase()}</div>
         <div className="profile-copy">
-          <strong>Ghost69</strong>
-          <span>Operations lead · Lagos</span>
+          <strong>{identifier}</strong>
+          <span>Your profile</span>
         </div>
       </button>
     </>

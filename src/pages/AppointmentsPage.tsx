@@ -1,9 +1,13 @@
+import { useAdminConnection } from "../components/AdminConnection";
+import { ConnectedAppointments } from "./ConnectedAppointments";
 import { EmptyResults } from "../components/EmptyResults";
 import { filterRecords } from "../lib/records";
 import type { AdminState } from "../types";
 import { I, status, btn, control, pageHead } from "../components/presentation";
 import { apptRows } from "../data/fixtures";
 export function AppointmentsPage({ state }: { state: AdminState }) {
+  const connection = useAdminConnection();
+  if (connection) return <ConnectedAppointments key={connection.channel.id} />;
   return (
     <div className="page">
       {pageHead(
