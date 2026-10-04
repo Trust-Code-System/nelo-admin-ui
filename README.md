@@ -1,58 +1,60 @@
-# NELO Admin UI
+# NELO Administration
 
-React and TypeScript frontend for NELO Atelier operations. The original visual design is preserved across overview, calendar, appointments, commissions, production, measurements, assets, orders, customers, catalogue, and operator profile.
+React and TypeScript administration for commerce and Atelier, using the Vendure Admin API. Every active screen reads backend records. Missing configuration shows a setup message; there is no demonstration-data fallback. Old design-preview components remain as source references but are not imported by the running application.
 
-Production site: https://nelo-atelier-admin-ui.vercel.app
+## Local setup
 
-## Run locally
-
-Requires Node.js 22.12 or later.
+Requires Node.js 22.12 or later and a running NELO backend.
 
 ```sh
 npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Open http://127.0.0.1:4312. Vite serves the application and updates it as source files change. To use another port, run `npm run dev -- --port 4313`.
+Set `VITE_ADMIN_API_URL` to `http://localhost:3000/admin-api` for local development, or the intended deployed backend's HTTPS `/admin-api` URL. Open http://127.0.0.1:4312. Restart Vite after changing environment variables.
 
-## Verify and build
+Sign in with an existing Vendure administrator and select an authorized channel. Backend permissions remain authoritative. Tokens are held in memory, never local/session storage; reloading requires signing in again. Logout invalidates the backend session and clears local state even if invalidation fails. No administrator credentials or secret keys belong in `VITE_` variables.
+
+## Connected operations
+
+| Screen                  | Live operations                                                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview                | Channel-scoped record counts; no invented revenue metrics                                                                                                                              |
+| Calendar / appointments | Appointment schedule, pagination, status filtering, details, confirmation, rescheduling, cancellation, completion, no-show                                                             |
+| Commissions             | Customer selection, create commission with first item, notes/deadlines, lifecycle transitions, additional items, appointment/order-line association, measurement snapshot confirmation |
+| Production              | Real commission items and permitted production transitions                                                                                                                             |
+| Measurements            | Customer profile reads and recording measurements through the Measurement Module                                                                                                       |
+| Catalogue               | Product and variant creation/editing, prices, stock at real locations, inventory settings, images; collection creation/editing and explicit product membership                         |
+| Customers               | Paginated search, creation and contact-detail updates                                                                                                                                  |
+| Orders                  | Order/payment/refund details, manual fulfillment creation, shipment/delivery transitions returned by the backend                                                                       |
+| Assets                  | Real asset library and multipart uploads                                                                                                                                               |
+| Profile                 | Active administrator identity and name updates                                                                                                                                         |
+
+**Products and collections are different.** A product is an item for sale; its variants carry SKU, price and stock. A collection groups products. Use **Catalogue → Collections → New collection** to create one.
+
+The custom admin covers these daily operations. Advanced option groups, collection filter rules, shipping/tax/payment configuration, staff/roles, retention/privacy administration and money-moving refunds/reconciliation remain in Vendure. The **Open Vendure** button opens the backend's dashboard. Staff appointment creation is unavailable because the backend exposes customer booking instead. The calendar retains the original time-grid design with Week, Day, Month and List views. It loads all appointment pages for the selected channel/status. Calendar axes use the operator browser timezone; appointment details retain the recorded timezone. Measurement CSV imports and pretend security/notification controls have been removed.
+
+Lists are paginated. Asset/product membership and related-order selectors currently load up to 100 records (appointments: 50). Commission customer selection supports email search to narrow matches. Larger catalogues will need dedicated searchable selectors before relying on those pickers for every record.
+
+All mutations use existing backend APIs and rules; resolvers own authorization, versions and lifecycle invariants. Prices are converted to integer minor units without floating-point multiplication. Stock accepts non-negative whole numbers. Measurement input is converted by the backend; stored values display in canonical millimetres. Appointment rescheduling uses the operator browser's local timezone and sends UTC.
+
+Writes are not automatically retried. A network, incomplete response or server failure can mean the write succeeded: refresh and inspect the saved record before attempting another action. Forms block resubmission in that situation. Existing records and details clear when changing channel.
+
+## Verification
 
 ```sh
 npm test
 npm run build
 npm run format:check
-npm run preview
 ```
 
-The build first checks TypeScript in strict mode, then bundles the React application into `dist/`. Preview serves that production build. GitHub Actions runs the same tests, build and formatting checks on pull requests.
+Tests cover bearer/session transport, channel headers, partial GraphQL failures, union business errors, no automatic retries, exact price conversion, inventory validation and commission IDs/version guards. Build checks strict TypeScript before bundling. CI runs tests, build and formatting.
 
-## Source layout
-
-- `src/App.tsx`: application shell and screen composition.
-- `src/pages/`: React screen components.
-- `src/components/`: navigation, charts, menus, dialogs, date picker and file staging.
-- `src/hooks/`: React state, navigation, actions and keyboard focus management.
-- `src/data/fixtures.ts`: demonstration data and form definitions.
-- `src/lib/`: record filtering and CSV export, with regression tests.
-- `src/styles/atelier.css`: original responsive styles and design tokens.
-- `public/nelo-logo.png`: original NELO artwork.
-
-`index.html` is the small Vite entry document. Application markup and behavior are React/TypeScript source; there is no embedded application script or HTML-string rendering. Screen navigation uses hash routes such as `/#appointments` and supports refresh and browser Back/Forward.
+Local verification on 4 October 2026: all operational read queries and mutation documents checked against the running Admin API schema; authenticated reads and all 11 browser views passed. Desktop/mobile layout checked. These checks do not prove every lifecycle transition or payment/refund action; test authorized writes on disposable local records before promoting to production.
 
 ## Deployment
 
-The existing Vercel project `nelo-atelier-admin-ui` is connected to `Trust-Code-System/nelo-admin-ui`. Its production branch is `main`. Vercel uses `npm run build` and serves `dist/` using the existing `vercel.json` routing and response headers. Branches receive preview deployments when permitted by the project's settings.
+The existing Vercel project is linked to `Trust-Code-System/nelo-admin-ui`. Set the public Admin API endpoint in the intended Vercel environment. Add the exact admin website origin to backend `CORS_ORIGINS`, preserving existing storefront origins, and ensure bearer-token response headers are exposed. Never add secret keys to this browser application. Changes to this branch do not deploy until pushed and promoted through the team's review process.
 
-Review and merge the migration pull request to update the existing production URL. No additional Vercel project is required.
-
-## Data and integration status
-
-This remains a design preview. Records, operator identity, dates, permissions and account security indicators are demonstration fixtures. No real administrator authentication or Vendure Admin API connection is configured. Changing a preview preference does not change a real account or send notifications.
-
-Created records appear under **Added in this session** on their corresponding screen. They are held in React memory and disappear when the page reloads. Uploaded files and measurement CSVs are read or staged locally; they are not transmitted to a backend or persisted. CSV imports validate required headers only and do not create measurement profiles.
-
-The actual backend and Vendure Dashboard extension live in the separate `nelo-commerce` project. This migration does not change their authentication, APIs or data models.
-
-## Source provenance
-
-The original design was extracted from `admin-preview/index.html` at `nelo-commerce` commit `6cd9026` (`feat/atelier-admin-finish`). The React migration preserves its typography, layout, icons, artwork and responsive styling while replacing imperative DOM rendering with React components and state.
+The backend and customer storefront live in separate repositories; this integration does not change backend roles or domain modules.
